@@ -9,10 +9,10 @@ from troposphere.iam import Role, InstanceProfile
 import datetime
 import boto3
 
-
 class SFXTemplate:
-    def __init__(self):
+    def __init__(self, profile):
         self.template = Template()
+        self.profile = profile
 
     def buildParameters(self):
         self.paramKeyName=self.template.add_parameter(Parameter(
@@ -28,10 +28,6 @@ class SFXTemplate:
         ))
 
     def buildTemplate(self):
-        self.role = self.template.add_resource(Role(
-            "SFX-TestRole",
-            
-            
         self.vpc = self.template.add_resource(Stack(
             'Vpc',
             TemplateURL="https://s3.amazonaws.com/msel-cf-templates/vpc.template",
@@ -117,7 +113,7 @@ class SFXTemplate:
     def upload(self):
         import sys
         
-        session = boto3.Session(profile_name='jhu')
+        session = boto3.Session(profile_name=self.profile)
         cf_client = session.client('cloudformation')
         stacks=cf_client.describe_stacks()
         datestamp=f"{datetime.datetime.now():%Y%m%d%H%M%S}"
@@ -170,12 +166,20 @@ class SFXTemplate:
     def __str__(self):
         return(self.template.to_json())
 
+
 def main():
-    sfx = SFXTemplate()
+    import argparse
+    
+    parser=argparse.ArgumentParser()
+    parser.add_argument('-p', '--profile', default='default')
+    args = parser.parse_args()
+
+    sfx = SFXTemplate(profile=args.profile)
+    
     sfx.buildParameters()
     sfx.buildTemplate()
-
     sfx.upload()
+    
 if __name__ == '__main__':
     main()
 
